@@ -3,6 +3,8 @@ import { PromiseFn } from "react-async";
 
 import { ElementDefinition } from "cytoscape";
 
+import Fuse from "fuse.js";
+
 import { ApiCharacter, ApiVoiceActor, StoredCharacterConnection, StoredMediaList } from "@api";
 import { db } from "@utils/db";
 
@@ -11,13 +13,26 @@ const debug = Debug("seiyuu:calc-graph");
 
 export type GraphData = ElementDefinition[];
 
-export const resolveMediaList: PromiseFn<GraphData> = async (  {
-  graphData, 
-  mediaListId 
+export interface FuseItem {
+  id: string;
+  names: string[];
+}
+
+export const resolveMediaList: PromiseFn<GraphData> = async ({
+  graphData: _graphData, 
+  mediaListId,
+  fuse: _fuse,
+  hideRoot: _hideRoot = true
 }): Promise<ElementDefinition[]> => {
-  console.log(mediaListId, typeof mediaListId);
   if (typeof mediaListId !== "number") return [];
+  const graphData = _graphData as GraphData;
+  const fuse = _fuse as Fuse<FuseItem>;
+  const hideRoot = _hideRoot as boolean;
+
   debug("resolving nodes from media list %d", mediaListId);
+
+  // Items for search indexing
+  const fuseItems: FuseItem[] = [];
 
   const mediaCache: MediaCache = {};
   const charCache: CharCache = {};
@@ -30,7 +45,7 @@ export const resolveMediaList: PromiseFn<GraphData> = async (  {
 
   // Add a node for the original query anime, and mark it as the root
   await cacheMedia(mediaCache, [mediaListId]);
-  addMediaNode(graphData, mediaCache, mediaListId, true);
+  if (!hideRoot) addMediaNode(graphData, fuseItems, mediaCache, mediaListId, true);
 
   // First, find the character connections by this mediaList id
   const mediaCharConnsJoin = await db.characterConnectionIdsMediaListIds
@@ -44,9 +59,10 @@ export const resolveMediaList: PromiseFn<GraphData> = async (  {
   await cacheCharacters(charCache, charConnCache, mediaCharConns);
 
   // Add the inital character connection nodes (character + role)
+  debug("adding first level character nodes");
   for (const conn of mediaCharConns) {
     // Mark as root character edge
-    addCharacterNode(graphData, charCache, seenChars, mediaListId, conn, true);    
+    addCharacterNode(graphData, fuseItems, charCache, seenChars, mediaListId, conn, true, hideRoot);    
   }
 
   // For each of the characters from this media, get their voice actors
@@ -59,7 +75,7 @@ export const resolveMediaList: PromiseFn<GraphData> = async (  {
 
   // Add the voice actors for each character connection
   for (const { voiceActorId, characterConnectionId } of charVasJoin) {
-    addVoiceActorNode(graphData, charCache, vaCache[voiceActorId], charConnCache[characterConnectionId]);
+    addVoiceActorNode(graphData, fuseItems, charCache, vaCache[voiceActorId], charConnCache[characterConnectionId]);
   }
 
   // Now find the other character connections for each voice actor
@@ -92,7 +108,7 @@ export const resolveMediaList: PromiseFn<GraphData> = async (  {
     if (curMediaId === undefined || connMediaListId > curMediaId) 
       charConnToMedia[connId] = connMediaListId;
 
-    // Add this to our list of media to fetch
+    // Add this to our list of media to fetch as long as it's not the root media
     if (connMediaListId !== mediaListId) {
       newMediaIds.add(connMediaListId);
     }
@@ -102,21 +118,26 @@ export const resolveMediaList: PromiseFn<GraphData> = async (  {
   const newMediaIdsArr = Array.from(newMediaIds);
   await cacheMedia(mediaCache, newMediaIdsArr);
   for (const mediaId of newMediaIdsArr) {
-    addMediaNode(graphData, mediaCache, mediaId);
+    addMediaNode(graphData, fuseItems, mediaCache, mediaId);
   }
-
+  
   // Add all of those characters to the voice actor, skipping those in seenChars
+  debug("adding second level character nodes");
   for (let i = 0; i < vaCharConns.length; i++) {
     const vaJoin = vaCharsJoin[i];
     const conn = vaCharConns[i]; 
     if (!vaJoin || !conn) continue;
 
     // Create the character and tie it to the new media
-    addCharacterNode(graphData, charCache, seenChars, charConnToMedia[conn.id], conn);
+    const charMediaId = charConnToMedia[conn.id];
+    if (charMediaId !== mediaListId) {
+      addCharacterNode(graphData, fuseItems, charCache, seenChars, charMediaId, conn);
+    }
     // And then add the edge to the old voice actor    
     addVoiceActorEdge(graphData, charCache, vaCache[vaJoin.voiceActorId], conn);
   }
 
+  fuse.setCollection(fuseItems);
   return cleanGraph(graphData);
 }
 
@@ -125,25 +146,32 @@ export const resolveMediaList: PromiseFn<GraphData> = async (  {
 // =============================================================================
 function addCharacterNode(
   out: ElementDefinition[],
+  fuseItems: FuseItem[],
   charCache: CharCache,
   seenChars: Record<number, true>,
   mediaListId: number,
   conn?: StoredCharacterConnection,
-  rootCharacter?: boolean
+  rootCharacter?: boolean,
+  hideRoot?: boolean
 ): void {
   if (!conn) return;
   const char = charCache[conn.characterId];
   if (!char) return;
 
-  // Edge to media
-  out.push({ 
-    data: {
-      id: "character-" + char.id + "-media-" + mediaListId,
-      source: "character-" + char.id,
-      target: "media-" + mediaListId
-    },
-    classes: rootCharacter ? "root-edge" : undefined
-  });    
+  debug("char %d -> media %d", char.id, mediaListId);
+  const nodeId = "character-" + char.id;
+
+  // Edge to media (don't add if we're hiding the root node)
+  if (!(rootCharacter && hideRoot)) {
+    out.push({ 
+      data: {
+        id: nodeId + "-media-" + mediaListId,
+        source: nodeId,
+        target: "media-" + mediaListId
+      },
+      classes: rootCharacter ? "root-edge" : undefined
+    });    
+  }
 
   // Store this character in seenChars, so they're not shown twice if they
   // appear in more than one media. The edge is still added.
@@ -153,19 +181,26 @@ function addCharacterNode(
   // Character node
   out.push({ 
     data: { 
-      id: "character-" + char.id,
+      id: nodeId,
       // parent: "media-" + mediaListId, // Parent is the first known media
       label: char.name.full ?? char.name.native ?? `Character ${char.id}`
     },
-    classes: "char",
+    classes: classNames("char", { "root-node-child": rootCharacter }),
     style: {
       "background-image": char.image.medium
     }
+  });
+
+  // Search index item
+  fuseItems.push({
+    id: nodeId,
+    names: [char.name.full, char.name.native, `Character ${char.id}`]
   });
 }
 
 function addMediaNode(
   out: ElementDefinition[],
+  fuseItems: FuseItem[],
   mediaCache: MediaCache,
   mediaId?: number,
   root?: boolean
@@ -174,18 +209,28 @@ function addMediaNode(
   const media = mediaCache[mediaId];
   if (!media) return;
 
+  const nodeId = "media-" + mediaId;
+
+  // Media node
   out.push({ 
     data: { 
-      id: "media-" + mediaId,
+      id: nodeId,
       label: media.media.title.english ?? media.media.title.romaji ?? media.media.title.native ?? `Media ${media.id}`,
     },
     classes: classNames("media", { "root-node": root }),
     position: root ? { x: 0, y: 0 } : undefined
   });
+
+  // Search index item
+  fuseItems.push({
+    id: nodeId,
+    names: [media.media.title.english, media.media.title.romaji, media.media.title.native, `Media ${media.id}`]
+  });
 }
 
 function addVoiceActorNode(
   out: ElementDefinition[],
+  fuseItems: FuseItem[],
   charCache: CharCache,
   voiceActor?: ApiVoiceActor,
   conn?: StoredCharacterConnection,
@@ -194,10 +239,12 @@ function addVoiceActorNode(
   const char = charCache[conn.characterId];
   if (!char) return;
 
+  const nodeId = "voice-actor-" + voiceActor.id;
+
   // Voice actor node
   out.push({ 
     data: { 
-      id: "voice-actor-" + voiceActor.id,
+      id: nodeId,
       label: voiceActor.name.full ?? voiceActor.name.native ?? `Voice actor ${voiceActor.id}`
     },
     classes: "va",
@@ -208,6 +255,12 @@ function addVoiceActorNode(
 
   // Edge to character
   addVoiceActorEdge(out, charCache, voiceActor, conn);
+
+  // Search index item
+  fuseItems.push({
+    id: nodeId,
+    names: [voiceActor.name.full, voiceActor.name.native, `Voice actor ${voiceActor.id}`]
+  });
 }
 
 function addVoiceActorEdge(

@@ -11,7 +11,7 @@ interface MediaOption {
 
 interface Props {
   data: MediaOption[];
-  setSelectedMedia: (mediaListId: number | undefined) => void;
+  setSelectedMedia: (mediaListId?: number) => void;
 }
 
 const mediaTitle = (m: StoredMediaList): string =>
@@ -33,7 +33,7 @@ async function fetchMedia(): Promise<MediaOption[]> {
 }
 
 export function useMediaPicker(
-  setSelectedMedia: (mediaListId: number | undefined) => void
+  setSelectedMedia: (mediaListId?: number) => void
 ): [JSX.Element | null, () => void] {
   const { data, isPending, reload } = useAsync(fetchMedia);
 
@@ -56,7 +56,7 @@ function MediaPicker({
     setSelectedMedia(value ?? data[0].value);
   }
 
-  return <div className="flex">
+  return <div className="flex mb-2">
     {/* Picker */}
     <select
       value={value}

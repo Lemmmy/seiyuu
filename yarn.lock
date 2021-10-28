@@ -1399,6 +1399,13 @@
     "@types/yargs" "^15.0.0"
     chalk "^4.0.0"
 
+"@lemmmy/react-cytoscapejs@^1.2.2":
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/@lemmmy/react-cytoscapejs/-/react-cytoscapejs-1.2.2.tgz#7fd728a031855fd574a12a84e319e31548a194f9"
+  integrity sha512-XnxmnRMi0t+nvq3J6zkbgK7ksYlFcgpmKlWXAcUca0t5kQ4F3VjfJpwjzUTe3/HGimwZ2uclsbMaVajJxjZFhA==
+  dependencies:
+    prop-types "^15.6.2"
+
 "@nodelib/fs.scandir@2.1.4":
   version "2.1.4"
   resolved "https://registry.npmjs.org/@nodelib/fs.scandir/-/fs.scandir-2.1.4.tgz"
@@ -3596,6 +3603,13 @@ cose-base@^1.0.0:
   dependencies:
     layout-base "^1.0.0"
 
+cose-base@^2.0.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/cose-base/-/cose-base-2.1.0.tgz#89b2d4a59d7bd0cde3138a4689825f3e8a5abd6a"
+  integrity sha512-HTMm07dhxq1dIPGWwpiVrIk9n+DH7KYmqWA786mLe8jDS+1ZjGtJGIIsJVKoseZXS6/FxiUWCJ2B7XzqUCuhPw==
+  dependencies:
+    layout-base "^2.0.0"
+
 cosmiconfig@^5.0.0:
   version "5.2.1"
   resolved "https://registry.npmjs.org/cosmiconfig/-/cosmiconfig-5.2.1.tgz"
@@ -3945,10 +3959,17 @@ cytoscape-cose-bilkent@^4.1.0:
   dependencies:
     cose-base "^1.0.0"
 
-cytoscape@^3.2.19:
-  version "3.19.1"
-  resolved "https://registry.npmjs.org/cytoscape/-/cytoscape-3.19.1.tgz"
-  integrity sha512-fQSymoCzmDF5dejZqv94WXQUnI3cVZfaHWFQR+Q9RhJ6LzEs7dtkwgFYaoklsbXcrXz0uCGx4i3vQ0FiuOUu9Q==
+cytoscape-fcose@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/cytoscape-fcose/-/cytoscape-fcose-2.1.0.tgz#04c3093776ea6b71787009de641607db7d4edf55"
+  integrity sha512-Q3apPl66jf8/2sMsrCjNP247nbDkyIPjA9g5iPMMWNLZgP3/mn9aryF7EFY/oRPEpv7bKJ4jYmCoU5r5/qAc1Q==
+  dependencies:
+    cose-base "^2.0.0"
+
+cytoscape@^3.20.0:
+  version "3.20.0"
+  resolved "https://registry.yarnpkg.com/cytoscape/-/cytoscape-3.20.0.tgz#c626c1074f3a8a6f1bc58e8fbee8fd798a6fcbf3"
+  integrity sha512-V2OUoav8ltY9UPgdjuhQOqkkWT28IbJODioWCjcnLqmjym9lMpnD0ie0vdQCdAiZapjbTGAv8aoKmmSuVcC1gA==
   dependencies:
     heap "^0.2.6"
     lodash.debounce "^4.0.8"
@@ -5312,6 +5333,11 @@ functional-red-black-tree@^1.0.1:
   version "1.0.1"
   resolved "https://registry.npmjs.org/functional-red-black-tree/-/functional-red-black-tree-1.0.1.tgz"
   integrity sha1-GwqzvVU7Kg1jmdKcDj6gslIHgyc=
+
+fuse.js@^6.4.6:
+  version "6.4.6"
+  resolved "https://registry.yarnpkg.com/fuse.js/-/fuse.js-6.4.6.tgz#62f216c110e5aa22486aff20be7896d19a059b79"
+  integrity sha512-/gYxR/0VpXmWSfZOIPS3rWwU8SHgsRTwWuXhyb2O6s7aRuVtHtxCkR33bNYu3wyLyNx/Wpv0vU7FZy8Vj53VNw==
 
 gensync@^1.0.0-beta.1:
   version "1.0.0-beta.2"
@@ -7029,6 +7055,11 @@ layout-base@^1.0.0:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/layout-base/-/layout-base-1.0.2.tgz#1291e296883c322a9dd4c5dd82063721b53e26e2"
   integrity sha512-8h2oVEZNktL4BH2JCOI90iD1yXwL6iNW7KcCKT2QZgQJR2vbqDsldCTPRU9NifTCqHZci57XvQQ15YTu+sTYPg==
+
+layout-base@^2.0.0:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/layout-base/-/layout-base-2.0.1.tgz#d0337913586c90f9c2c075292069f5c2da5dd285"
+  integrity sha512-dp3s92+uNI1hWIpPGH3jK2kxE2lMjdXdr+DH8ynZHpd6PUlH6x6cbuXnoMmiNumznqaNO31xu9e79F0uuZ0JFg==
 
 leven@^3.1.0:
   version "3.1.0"
@@ -9320,14 +9351,6 @@ react-async@^10.0.1:
   version "10.0.1"
   resolved "https://registry.npmjs.org/react-async/-/react-async-10.0.1.tgz"
   integrity sha512-ORUz5ca0B57QgBIzEZM5SuhJ6xFjkvEEs0gylLNlWf06vuVcLZsjIw3wx58jJkZG38p+0nUAxRgFW2b7mnVZzA==
-
-react-cytoscapejs@^1.2.1:
-  version "1.2.1"
-  resolved "https://registry.npmjs.org/react-cytoscapejs/-/react-cytoscapejs-1.2.1.tgz"
-  integrity sha512-8exVCetpzyGCAKuRjXPWGjFCnb22boZ3SXUPpPB/+wQI8Q8BwkT1URN3A7J1Czvj1qAbShh5QQ514mBUp7i7kw==
-  dependencies:
-    cytoscape "^3.2.19"
-    prop-types "^15.6.2"
 
 react-dev-utils@^11.0.3:
   version "11.0.4"

@@ -5,14 +5,19 @@ import { fetchData } from "@api";
 
 import { useDbCounts } from "./DbCounts";
 import { useMediaPicker } from "./settings/MediaPicker";
+import { GraphFilter } from "./settings/GraphFilter";
 
 import { lsGetString, lsSetString } from "@utils";
 
 interface Props {
-  setSelectedMedia: (mediaListId: number | undefined) => void;
+  setSelectedMedia: (mediaListId?: number) => void;
+  setGraphFilter: (filter?: string) => number;
 }
 
-export function AppHeader({ setSelectedMedia }: Props): JSX.Element {
+export function AppHeader({ 
+  setSelectedMedia,
+  setGraphFilter
+}: Props): JSX.Element {
   const [username, setUsername] = useState(() => lsGetString("username") ?? "");
   const [syncing, setSyncing] = useState(false);
 
@@ -67,9 +72,10 @@ export function AppHeader({ setSelectedMedia }: Props): JSX.Element {
       {counts}
     </div>
 
-    {/* Media selection section */}
+    {/* Media selection section and filter */}
     <div className="mr-4 p-4 flex flex-col">
       {mediaPicker}
+      <GraphFilter setGraphFilter={setGraphFilter} />
     </div>
 
     {/* Settings section */}

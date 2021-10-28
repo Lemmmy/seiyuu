@@ -22,15 +22,27 @@ export const STYLESHEET: Stylesheet[] = [
   },
   { 
     selector: "edge",
-    style: {
-      "width": 1
-    }
+    style: ({
+      "width": 1,
+      "line-color": "black",
+      "line-opacity": 0.4
+    } as any as Css.Node | Css.Edge | Css.Core)
+  },
+  { 
+    selector: "edge.highlighted",
+    style: ({
+      "width": 3,
+      "line-color": "blue",
+      "line-opacity": 1
+    } as any as Css.Node | Css.Edge | Css.Core)
   },
   { 
     selector: ".root-edge",
-    style: {
-      "width": 3
-    }
+    style: ({
+      "width": 3,
+      "line-color": "black",
+      "line-opacity": 0.6
+    } as any as Css.Node | Css.Edge | Css.Core)
   },
   {
     selector: ".media",
@@ -58,9 +70,23 @@ export const STYLESHEET: Stylesheet[] = [
       "width": 50,
       "height": 75,
       "shape": "round-rectangle",
-      "background-color": "rgba(255, 255, 255, 0.5)",
+      "background-color": "white",
       "background-fit": "contain",
       "bounds-expansion": "10px"
+    } as any as Css.Node | Css.Edge | Css.Core)
+  },
+  {
+    selector: ".root-node-child",
+    style: ({
+      "width": 50,
+      "height": 75,
+      "shape": "round-rectangle",
+      "background-color": "green",
+      "background-fit": "contain",
+      "border-width": 3,
+      "border-color": "#00AA00",
+      "bounds-expansion": "10px",
+      "opacity": 0.9,
     } as any as Css.Node | Css.Edge | Css.Core)
   },
   {
@@ -69,7 +95,7 @@ export const STYLESHEET: Stylesheet[] = [
       "width": 100,
       "height": 150,
       "shape": "round-rectangle",
-      "background-color": "rgba(255, 255, 255, 0.5)",
+      "background-color": "white",
       "background-fit": "contain",
       "bounds-expansion": "20px"
     } as any as Css.Node | Css.Edge | Css.Core)
@@ -79,5 +105,18 @@ export const STYLESHEET: Stylesheet[] = [
     style: {
       "font-style": "italic"
     }
+  },  
+  { 
+    selector: "node.highlighted",
+    style: ({
+      "border-width": 5,
+      "border-color": "blue",
+    } as any as Css.Node | Css.Edge | Css.Core)
   },
+  { 
+    selector: "node.filtered",
+    style: ({
+      "opacity": 0.3,
+    } as any as Css.Node | Css.Edge | Css.Core)
+  }
 ];
