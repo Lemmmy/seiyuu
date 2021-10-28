@@ -15,6 +15,7 @@ export const resolveMediaList: PromiseFn<GraphData> = async (  {
   graphData, 
   mediaListId 
 }): Promise<ElementDefinition[]> => {
+  console.log(mediaListId, typeof mediaListId);
   if (typeof mediaListId !== "number") return [];
   debug("resolving nodes from media list %d", mediaListId);
 

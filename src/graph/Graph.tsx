@@ -20,14 +20,24 @@ const layout = {
   // randomize: true
 };
 
-export function Graph(): JSX.Element | null {
+interface Props {
+  mediaListId?: number;
+}
+
+export function Graph({ mediaListId }: Props): JSX.Element | null {
   const { data, isPending } = useAsync<ElementDefinition[]>({ 
     promiseFn: resolveMediaList, 
-    mediaListId: 222953532,
+    mediaListId,
+    watch: mediaListId,
     graphData: []
   });
 
-  if (isPending || !data) return null;
+  // Loading placeholder
+  if (isPending)
+    return <div className="flex-1 p-4 text-center text-gray-400">Loading</div>;
+  // No data placeholder
+  if (!data || !data.length || !mediaListId)
+    return <div className="flex-1 p-4 text-center text-gray-400">No data</div>;
 
   return <CytoscapeComponent
     className="flex-1"

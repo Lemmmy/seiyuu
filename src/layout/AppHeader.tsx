@@ -4,25 +4,35 @@ import classNames from "classnames";
 import { fetchData } from "@api";
 
 import { useDbCounts } from "./DbCounts";
+import { useMediaPicker } from "./settings/MediaPicker";
 
 import { lsGetString, lsSetString } from "@utils";
 
-export function AppHeader(): JSX.Element {
+interface Props {
+  setSelectedMedia: (mediaListId: number | undefined) => void;
+}
+
+export function AppHeader({ setSelectedMedia }: Props): JSX.Element {
   const [username, setUsername] = useState(() => lsGetString("username") ?? "");
   const [syncing, setSyncing] = useState(false);
 
   const [counts, reloadCounts] = useDbCounts(username);
+  const [mediaPicker, reloadMediaPicker] = useMediaPicker(setSelectedMedia);
 
   async function loadData() {
     if (!username) return;
     setSyncing(true);
+
     lsSetString("username", username);
     await fetchData(username);
+
     reloadCounts();
+    reloadMediaPicker();
+
     setSyncing(false);
   }
 
-  return <div className="bg-gray-100 grid grid-cols-2 divide-x divide-gray-200">
+  return <div className="bg-gray-100 grid grid-cols-3 divide-x divide-gray-200">
     {/* Sync section */}
     <div className="mr-4 p-4 flex flex-col">
       {/* Username input */}
@@ -45,8 +55,8 @@ export function AppHeader(): JSX.Element {
           onClick={loadData}
           disabled={syncing}
           className={classNames(
-            "rounded px-4 py-2 text-white hover:bg-blue-300 transition",
-            { "bg-blue-300": syncing, "bg-blue-400": !syncing },
+            "rounded px-4 py-2 text-white hover:bg-blue-400 transition",
+            { "bg-blue-300": syncing, "bg-blue-500": !syncing },
           )}
         >
           Load data
@@ -55,6 +65,11 @@ export function AppHeader(): JSX.Element {
 
       {/* Sync status */}
       {counts}
+    </div>
+
+    {/* Media selection section */}
+    <div className="mr-4 p-4 flex flex-col">
+      {mediaPicker}
     </div>
 
     {/* Settings section */}
