@@ -1,0 +1,53 @@
+.graph .links {
+  stroke: #999999;
+  stroke-opacity: 0.6;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.graph .nodes {
+  fill: #CCCCCC;
+  stroke: #FFFFFF;
+  stroke-opacity: 1;
+  stroke-width: 1.5;
+}
+
+.graph .node {
+  transition: opacity 0.3s ease;
+  opacity: 1;
+}
+
+.graph .node.fixed {
+  fill: #FF0000;
+}
+
+.graph .node.filtered {
+  opacity: 0.3;
+}
+
+.graph .node.type-media {
+  fill: rgba(125, 0, 255, 0.3);
+}
+
+.graph .node.type-character.root-character {
+  filter: drop-shadow(0 0 5px rgba(0, 255, 0, .7));
+  stroke: rgba(0, 200, 0, 0.75);
+  stroke-width: 4;
+}
+
+.graph .node text.label {
+  stroke: none;
+  font: 8px sans-serif;
+  fill: #000000 !important;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.graph .node.type-media text.label {
+  font: 5px sans-serif;
+  opacity: 0.5;
+}
+
+.graph .node.type-voice_actor text.label {
+  font: bold 10px sans-serif;
+}

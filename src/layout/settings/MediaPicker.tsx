@@ -1,8 +1,10 @@
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useAsync } from "react-async";
 
 import { db } from "@utils/db";
 import { StoredMediaList } from "@api";
+
+import { lsGetNumber, lsSetNumber } from "@utils";
 
 interface MediaOption {
   value: number;
@@ -50,9 +52,16 @@ function MediaPicker({
   data,
   setSelectedMedia
 }: Props): JSX.Element {
-  const [value, setValue] = useState<number>(data[0].value);
+  const [value, setValue] = useState<number>(lsGetNumber("lastMedia") ?? data[0].value);
+
+  useEffect(() => {
+    const lastMedia = lsGetNumber("lastMedia");
+    if (!lastMedia) return;
+    setSelectedMedia(lastMedia);
+  }, [setSelectedMedia]);
 
   function onCommit() {
+    lsSetNumber("lastMedia", value ?? data[0].value);
     setSelectedMedia(value ?? data[0].value);
   }
 

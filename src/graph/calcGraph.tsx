@@ -1,7 +1,6 @@
-import classNames from "classnames";
 import { PromiseFn } from "react-async";
 
-import { ElementDefinition } from "cytoscape";
+import { SimulationNodeDatum, SimulationLinkDatum } from "d3-force";
 
 import Fuse from "fuse.js";
 
@@ -11,7 +10,21 @@ import { db } from "@utils/db";
 import Debug from "debug";
 const debug = Debug("seiyuu:calc-graph");
 
-export type GraphData = ElementDefinition[];
+export type NodeObjType = "character" | "media" | "voice_actor";
+export interface NodeDatum extends SimulationNodeDatum {
+  id: string;
+  label: string;
+  extra?: string;
+  image?: string;
+  type: NodeObjType;
+  rootCharacter?: boolean;
+}
+
+export type LinkType = SimulationLinkDatum<NodeDatum>;
+export interface GraphData {
+  nodes: NodeDatum[];
+  links: LinkType[];
+}
 
 export interface FuseItem {
   id: string;
@@ -22,14 +35,17 @@ export const resolveMediaList: PromiseFn<GraphData> = async ({
   graphData: _graphData, 
   mediaListId,
   fuse: _fuse,
-  hideRoot: _hideRoot = true
-}): Promise<ElementDefinition[]> => {
-  if (typeof mediaListId !== "number") return [];
-  const graphData = _graphData as GraphData;
+  hideRoot: _hideRoot = true,
+  hideMedia: _hideMedia = false
+}): Promise<GraphData> => {
+  debug("resolving nodes from media list %d", mediaListId);
+
+  const graphData = _graphData as GraphData ?? { nodes: [], links: [] };
+  if (typeof mediaListId !== "number") return graphData;
+
   const fuse = _fuse as Fuse<FuseItem>;
   const hideRoot = _hideRoot as boolean;
-
-  debug("resolving nodes from media list %d", mediaListId);
+  const hideMedia = _hideMedia as boolean;
 
   // Items for search indexing
   const fuseItems: FuseItem[] = [];
@@ -117,8 +133,10 @@ export const resolveMediaList: PromiseFn<GraphData> = async ({
   // Add all the new media
   const newMediaIdsArr = Array.from(newMediaIds);
   await cacheMedia(mediaCache, newMediaIdsArr);
-  for (const mediaId of newMediaIdsArr) {
-    addMediaNode(graphData, fuseItems, mediaCache, mediaId);
+  if (!hideMedia) {
+    for (const mediaId of newMediaIdsArr) {
+      addMediaNode(graphData, fuseItems, mediaCache, mediaId);
+    }
   }
   
   // Add all of those characters to the voice actor, skipping those in seenChars
@@ -131,25 +149,26 @@ export const resolveMediaList: PromiseFn<GraphData> = async ({
     // Create the character and tie it to the new media
     const charMediaId = charConnToMedia[conn.id];
     if (charMediaId !== mediaListId) {
-      addCharacterNode(graphData, fuseItems, charCache, seenChars, charMediaId, conn);
+      addCharacterNode(graphData, fuseItems, charCache, seenChars, hideMedia ? undefined : charMediaId, conn);
     }
     // And then add the edge to the old voice actor    
-    addVoiceActorEdge(graphData, charCache, vaCache[vaJoin.voiceActorId], conn);
+    addVoiceActorEdge(graphData.links, charCache, vaCache[vaJoin.voiceActorId], conn);
   }
 
   fuse.setCollection(fuseItems);
-  return cleanGraph(graphData);
+  // return cleanGraph(graphData);
+  return graphData;
 }
 
 // =============================================================================
 // add
 // =============================================================================
 function addCharacterNode(
-  out: ElementDefinition[],
+  { nodes, links }: GraphData,
   fuseItems: FuseItem[],
   charCache: CharCache,
   seenChars: Record<number, true>,
-  mediaListId: number,
+  mediaListId?: number,
   conn?: StoredCharacterConnection,
   rootCharacter?: boolean,
   hideRoot?: boolean
@@ -158,18 +177,15 @@ function addCharacterNode(
   const char = charCache[conn.characterId];
   if (!char) return;
 
-  debug("char %d -> media %d", char.id, mediaListId);
+  // debug("char %d -> media %d", char.id, mediaListId);
   const nodeId = "character-" + char.id;
 
   // Edge to media (don't add if we're hiding the root node)
-  if (!(rootCharacter && hideRoot)) {
-    out.push({ 
-      data: {
-        id: nodeId + "-media-" + mediaListId,
-        source: nodeId,
-        target: "media-" + mediaListId
-      },
-      classes: rootCharacter ? "root-edge" : undefined
+  if (!(rootCharacter && hideRoot) && mediaListId !== undefined) {
+    links.push({ 
+      // id: nodeId + "-media-" + mediaListId,
+      source: nodeId,
+      target: "media-" + mediaListId
     });    
   }
 
@@ -179,16 +195,13 @@ function addCharacterNode(
   seenChars[char.id] = true;
 
   // Character node
-  out.push({ 
-    data: { 
-      id: nodeId,
-      // parent: "media-" + mediaListId, // Parent is the first known media
-      label: char.name.full ?? char.name.native ?? `Character ${char.id}`
-    },
-    classes: classNames("char", { "root-node-child": rootCharacter }),
-    style: {
-      "background-image": char.image.medium
-    }
+  nodes.push({ 
+    type: "character",
+    id: nodeId,
+    // parent: "media-" + mediaListId, // Parent is the first known media
+    label: char.name.full ?? char.name.native ?? `Character ${char.id}`,
+    image: char.image.medium,
+    rootCharacter
   });
 
   // Search index item
@@ -199,7 +212,7 @@ function addCharacterNode(
 }
 
 function addMediaNode(
-  out: ElementDefinition[],
+  { nodes }: GraphData,
   fuseItems: FuseItem[],
   mediaCache: MediaCache,
   mediaId?: number,
@@ -212,13 +225,12 @@ function addMediaNode(
   const nodeId = "media-" + mediaId;
 
   // Media node
-  out.push({ 
-    data: { 
-      id: nodeId,
-      label: media.media.title.english ?? media.media.title.romaji ?? media.media.title.native ?? `Media ${media.id}`,
-    },
-    classes: classNames("media", { "root-node": root }),
-    position: root ? { x: 0, y: 0 } : undefined
+  nodes.push({ 
+    type: "media",
+    id: nodeId,
+    label: media.media.title.english ?? media.media.title.romaji ?? media.media.title.native ?? `Media ${media.id}`,
+    x: root ? 0 : undefined,
+    y: root ? 0 : undefined
   });
 
   // Search index item
@@ -229,7 +241,7 @@ function addMediaNode(
 }
 
 function addVoiceActorNode(
-  out: ElementDefinition[],
+  { nodes, links }: GraphData,
   fuseItems: FuseItem[],
   charCache: CharCache,
   voiceActor?: ApiVoiceActor,
@@ -242,19 +254,15 @@ function addVoiceActorNode(
   const nodeId = "voice-actor-" + voiceActor.id;
 
   // Voice actor node
-  out.push({ 
-    data: { 
-      id: nodeId,
-      label: voiceActor.name.full ?? voiceActor.name.native ?? `Voice actor ${voiceActor.id}`
-    },
-    classes: "va",
-    style: {
-      "background-image": voiceActor.image.medium
-    }
+  nodes.push({ 
+    type: "voice_actor",
+    id: nodeId,
+    label: voiceActor.name.full ?? voiceActor.name.native ?? `Voice actor ${voiceActor.id}`,
+    image: voiceActor.image.medium
   });
 
   // Edge to character
-  addVoiceActorEdge(out, charCache, voiceActor, conn);
+  addVoiceActorEdge(links, charCache, voiceActor, conn);
 
   // Search index item
   fuseItems.push({
@@ -264,7 +272,7 @@ function addVoiceActorNode(
 }
 
 function addVoiceActorEdge(
-  out: ElementDefinition[],
+  links: LinkType[],
   charCache: CharCache,
   voiceActor?: ApiVoiceActor,
   conn?: StoredCharacterConnection,
@@ -274,12 +282,9 @@ function addVoiceActorEdge(
   if (!char) return;
 
   // Edge to character
-  out.push({ 
-    data: {
-      id: "voice-actor-" + voiceActor.id + "-character-" + char.id,
-      source: "voice-actor-" + voiceActor.id,
-      target: "character-" + char.id
-    }
+  links.push({ 
+    source: "voice-actor-" + voiceActor.id,
+    target: "character-" + char.id
   });
 }
 
@@ -342,18 +347,18 @@ async function cacheVoiceActors(
 // =============================================================================
 // prep
 // =============================================================================
-/** deduplicate graph data */
-function cleanGraph(graphData: GraphData): GraphData {
-  const seen: Record<string, true> = {};
-  const out: GraphData = [];
+// /** deduplicate graph data */
+// function cleanGraph(graphData: GraphData): GraphData {
+//   const seen: Record<string, true> = {};
+//   const out: GraphData = [];
 
-  for (const el of graphData) {
-    const id = el?.data?.id;
-    if (!id || seen[id]) continue;
+//   for (const el of graphData) {
+//     const id = el?.data?.id;
+//     if (!id || seen[id]) continue;
 
-    out.push(el);
-    seen[id] = true;
-  }
+//     out.push(el);
+//     seen[id] = true;
+//   }
 
-  return out;
-}
+//   return out;
+// }
